@@ -1,0 +1,12 @@
+{
+  "name": "entry",
+  "version": "1.0.0",
+  "description": "Please describe the basic information.",
+  "main": "",
+  "author": "",
+  "license": "",
+  "dependencies": {
+    "wifi_scan": "file:../har/wifi_scan.har",
+    "@ohos/flutter_ohos": "har/flutter.har"
+  }
+}

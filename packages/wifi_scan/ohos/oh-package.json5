@@ -1,0 +1,11 @@
+{
+  "name": "wifi_scan",
+  "version": "1.0.0",
+  "description": "OpenHarmony platform implementation for the wifi_scan Flutter plugin.",
+  "main": "index.ets",
+  "author": "",
+  "license": "Apache-2.0",
+  "dependencies": {
+    "@ohos/flutter_ohos": "file:./har/flutter.har"
+  }
+}
