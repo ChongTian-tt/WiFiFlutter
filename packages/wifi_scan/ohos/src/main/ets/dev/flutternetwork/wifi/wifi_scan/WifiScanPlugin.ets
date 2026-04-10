@@ -50,6 +50,7 @@ export default class WifiScanPlugin implements FlutterPlugin, AbilityAware {
   private eventChannel: EventChannel | null = null;
   private eventSink: EventSink | null = null;
   private pollTimerId: number | null = null;
+  private pollWindowTimerId: number | null = null;
   private scanStateListener: ((state: number) => void) | null = null;
   private readonly methodCallHandler: MethodCallHandler = {
     onMethodCall: (call: MethodCall, result: MethodResult): void => {
@@ -71,9 +72,14 @@ export default class WifiScanPlugin implements FlutterPlugin, AbilityAware {
 
   onAttachedToAbility(binding: AbilityPluginBinding): void {
     this.abilityContext = binding.getAbility().context as common.UIAbilityContext;
+    if (this.eventSink !== null) {
+      this.registerScanStateListener();
+    }
   }
 
   onDetachedFromAbility(): void {
+    this.unregisterScanStateListener();
+    this.stopPolling();
     this.abilityContext = null;
   }
 
@@ -107,7 +113,7 @@ export default class WifiScanPlugin implements FlutterPlugin, AbilityAware {
     this.eventSink = events;
     this.pushScannedResults();
     if (!this.registerScanStateListener()) {
-      this.startPolling();
+      Log.i(constants.TAG, 'handleListen scan state listener unavailable, waiting for startScan polling window');
     }
   }
 
@@ -140,21 +146,26 @@ export default class WifiScanPlugin implements FlutterPlugin, AbilityAware {
    * @returns 处理完成后的 Promise。
    */
   private async handleMethodCallInternal(call: MethodCall, result: MethodResult): Promise<void> {
-    switch (call.method) {
-      case 'canStartScan':
-        await this.handleCanStartScan(call, result);
-        break;
-      case 'startScan':
-        result.success(this.startScan());
-        break;
-      case 'canGetScannedResults':
-        await this.handleCanGetScannedResults(call, result);
-        break;
-      case 'getScannedResults':
-        result.success(this.getScannedResults());
-        break;
-      default:
-        result.notImplemented();
+    try {
+      switch (call.method) {
+        case 'canStartScan':
+          await this.handleCanStartScan(call, result);
+          break;
+        case 'startScan':
+          result.success(this.startScan());
+          break;
+        case 'canGetScannedResults':
+          await this.handleCanGetScannedResults(result);
+          break;
+        case 'getScannedResults':
+          result.success(this.getScannedResults());
+          break;
+        default:
+          result.notImplemented();
+      }
+    } catch (error) {
+      Log.e(constants.TAG, `handleMethodCall ${call.method} failed: ${error.message}`);
+      result.error(call.method, error.message, null);
     }
   }
 
@@ -227,6 +238,7 @@ export default class WifiScanPlugin implements FlutterPlugin, AbilityAware {
       }
 
       this.startPlatformScan();
+      this.startPollingWindow();
       Log.i(constants.TAG, `startScan success `);
       return true;
     } catch (error) {
@@ -237,12 +249,11 @@ export default class WifiScanPlugin implements FlutterPlugin, AbilityAware {
 
   /**
    * 检查当前是否允许获取扫描结果。
-   * @param call Flutter 方法调用对象，当前实现中未使用。
+   * ohos 的 getScanInfoList 仅需 GET_WIFI_INFO，不依赖位置权限。
    * @param result Flutter 方法返回对象。
    * @returns 处理完成后的 Promise。
    */
   private async handleCanGetScannedResults(
-    call: MethodCall,
     result: MethodResult,
   ): Promise<void> {
     if (!await this.hasGetScannedResultsPermission()) {
@@ -274,7 +285,6 @@ export default class WifiScanPlugin implements FlutterPlugin, AbilityAware {
 
   /**
    * 向事件通道推送当前扫描结果。
-   * @returns 无。
    */
   private pushScannedResults(): void {
     if (this.eventSink == null) {
@@ -515,6 +525,30 @@ export default class WifiScanPlugin implements FlutterPlugin, AbilityAware {
   }
 
   /**
+   * 在事件监听不可用时，开启一次短时轮询窗口等待扫描结果刷新。
+   * @returns 无。
+   */
+  private startPollingWindow(): void {
+    if (this.eventSink == null) {
+      return;
+    }
+
+    if (this.scanStateListener !== null) {
+      return;
+    }
+
+    this.startPolling();
+    if (this.pollWindowTimerId !== null) {
+      clearTimeout(this.pollWindowTimerId);
+    }
+
+    this.pollWindowTimerId = setTimeout((): void => {
+      Log.i(constants.TAG, 'startPollingWindow reached timeout, stopping polling');
+      this.stopPolling();
+    }, constants.SCAN_RESULTS_POLL_WINDOW_MS) as number;
+  }
+
+  /**
    * 启动扫描结果轮询任务。
    * @returns 无。
    */
@@ -523,7 +557,7 @@ export default class WifiScanPlugin implements FlutterPlugin, AbilityAware {
     if (this.pollTimerId !== null) {
       return;
     }
-    // 3s 轮询获取扫描结果
+
     this.pollTimerId = setInterval((): void => {
       this.pushScannedResults();
     }, constants.SCAN_RESULTS_POLL_INTERVAL_MS) as number;
@@ -535,6 +569,11 @@ export default class WifiScanPlugin implements FlutterPlugin, AbilityAware {
    */
   private stopPolling(): void {
     Log.i(constants.TAG, `stopPolling this.pollTimerId: ${this.pollTimerId}`);
+    if (this.pollWindowTimerId !== null) {
+      clearTimeout(this.pollWindowTimerId);
+      this.pollWindowTimerId = null;
+    }
+
     if (this.pollTimerId === null) {
       return;
     }
@@ -554,9 +593,7 @@ export default class WifiScanPlugin implements FlutterPlugin, AbilityAware {
 
     this.scanStateListener = (state: number): void => {
       Log.i(constants.TAG, `wifiScanStateChange state: ${state}`);
-      if (state === constants.WIFI_SCAN_STATE_SUCCESS) {
-        this.pushScannedResults();
-      }
+      this.pushScannedResults();
     };
 
     try {

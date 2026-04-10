@@ -34,6 +34,7 @@ export const LOCATION_PERMISSIONS: Array<Permissions> = [
 ];
 
 export const SCAN_RESULTS_POLL_INTERVAL_MS = 3000;
+export const SCAN_RESULTS_POLL_WINDOW_MS = 15000;
 export const WIFI_SCAN_STATE_FAILED = 0;
 export const WIFI_SCAN_STATE_SUCCESS = 1;
 

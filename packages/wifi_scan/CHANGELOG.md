@@ -1,65 +1,13 @@
-## 0.4.1+2
+## 1.0.0
 
- - **FIX**: Update compileSdkVersion to fix Android release build with flutter 3.24 (#398).
-
-## 0.4.1+1
-
- - **FIX**: Update compileSdkVersion to fix Android release build with flutter 3.24 (#398).
-
-## 0.4.1
-- 
-- **CHORE**: Update Gradle to 8.2 and AGP to 8.2.0 (#360)
-
-## 0.4.0+2
-
- - **FIX**: ci failures.
-
-## 0.4.0+1
-
- - **DOCS**: fix badge links.
-
-## 0.4.0
-
-> Note: This release has breaking changes.
-
- - **BREAKING** **REVERT**: added back "can" APIs (#288).
-
-## 0.3.0
-
-> Note: This release has breaking changes.
-
- - **DOCS**: added "Check support" section in README (#260).
- - **BREAKING** **FIX**: flutter 3 support (#281).
-
-## 0.2.1
-
- - **FEAT**: added `hasCapability` API (#258).
-
-## 0.2.0+1
-
- - **FIX**: proper result if error after "ask permission" (#257).
- - **DOCS**: added link for iOS requirements.
-
-## 0.2.0
-
-> Note: This release has breaking changes.
-
- - **BREAKING** **REFACTOR**: not having separate "can" APIs for checks (#246).
-
-## 0.1.0+3
-
- - **FIX**: example - stream toggle not working (#241).
-
-## 0.1.0+2
-
- - **FIX**: example -`_getScannedResults` wrong implementation (#232).
-
-## 0.1.0+1
-
- - **REFACTOR**: not using `StreamBuilder` but listening (#231).
- - **DOCS**: improvement (#230).
- - **DOCS**: fix doc link in plugin README.
-
-## 0.1.0
-
- - **FEAT**: plugin added (#205).
+- 完成 OpenHarmony 平台适配，基于上游 wifi_scan 0.4.1+2 版本。
+- 支持 `canStartScan` 接口，检测扫描条件（权限、Wi-Fi 状态、位置服务）。
+- 支持 `startScan` 接口，触发平台侧 Wi-Fi 扫描。
+- 支持 `canGetScannedResults` 接口，检测获取结果条件。
+- 支持 `getScannedResults` 接口，获取缓存的扫描结果列表。
+- 支持 `onScannedResultsAvailable` 事件流，实时推送扫描结果更新。
+- 适配 ohos 权限模型：`ohos.permission.GET_WIFI_INFO`、`ohos.permission.SET_WIFI_INFO`、`ohos.permission.LOCATION`、`ohos.permission.APPROXIMATELY_LOCATION`。
+- 支持 `wifiScanStateChange` 系统事件监听，扫描完成后主动推送结果。
+- 提供轮询回退机制，在事件监听不可用时通过短时轮询窗口保障结果推送。
+- 适配 LEGACY / MODERN 双扫描后端，根据设备 SDK API 版本自动切换。
+- WiFiAccessPoint 属性中 `standard`、`isPasspoint`、`operatorFriendlyName`、`venueName`、`is80211mcResponder` 因 ohos 平台接口限制暂不支持，返回 null。
