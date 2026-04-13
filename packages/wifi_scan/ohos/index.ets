@@ -14,5 +14,5 @@
  * limitations under the License.
  */
 
-import WifiScanPlugin from './src/main/ets/dev/flutternetwork/wifi/wifi_scan/WifiScanPlugin';
+import WifiScanPlugin from './src/main/ets/components/plugin/WifiScanPlugin';
 export default WifiScanPlugin;
